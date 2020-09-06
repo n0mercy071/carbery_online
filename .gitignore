@@ -1,0 +1,7 @@
+/.vscode
+/Include
+/Lib
+/openapi (1).yaml
+/pyvenv.cfg
+/Scripts
+/__pycache__
