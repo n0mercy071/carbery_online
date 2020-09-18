@@ -41,12 +41,9 @@ async def check_auth(
 )
 async def get_filename(hash: str):
     values = database.get_value(
-        select='*',
-        table_name='carbery_table',
-        where="sha256 = '{}' or md5='{}'".format(
-            hash,
-            hash
-        )
+        '''SELECT * FROM carbery_table
+            WHERE sha256=? OR md5=?''',
+        (hash, hash)
     )
     if not values:
         raise HTTPException(
@@ -73,24 +70,16 @@ async def delete_hash(
     x_auth_user: str = Depends(check_auth)
 ):
     values = database.get_value(
-        select='*',
-        table_name='carbery_table',
-        where="userId='{}' and (sha256='{}' or md5='{}')".format(
-            x_auth_user, hash, hash
+        '''SELECT * FROM carbery_table
+            WHERE userId=? and (sha256=? or md5=?)''',
+        (x_auth_user, hash, hash)
         )
-    )
     if not values:
         raise HTTPException(
             status_code=404,
             detail='Файлы с данным хэшем не найдены.'
         )
-
-    database.del_value(
-        'carbery_table',
-        "userId='{}' and (sha256='{}' or md5='{}')".format(
-            x_auth_user, hash, hash
-        )
-    )
+    database.del_value((x_auth_user, hash, hash))
 
 
 @app.post(
@@ -109,15 +98,7 @@ async def add_hash(
     file = file.file.read()
     md5 = hashlib.md5(file).hexdigest()
     sha256 = hashlib.sha256(file).hexdigest()
-    database.add_value(
-        table_name='carbery_table',
-        values={
-            'userId': x_auth_user,
-            'filename': filename,
-            'sha256': sha256,
-            'md5': md5
-        }
-    )
+    database.add_value((x_auth_user, filename, sha256, md5))
     return {
         'userId': x_auth_user,
         'filename': filename,

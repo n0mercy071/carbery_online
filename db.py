@@ -8,36 +8,23 @@ class Database():
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
 
-    def add_value(self, table_name, values):
+    def add_value(self, values):
         value = self.get_value(
-            select='*',
-            table_name=table_name,
-            where="userId='{}' and filename='{}' and sha256='{}' and md5='{}'".format(
-                values.get('userId'),
-                values.get('filename'),
-                values.get('sha256'),
-                values.get('md5')
-            )
+            '''SELECT * FROM carbery_table 
+                WHERE userId=? AND filename=? AND sha256=? AND md5=?''',
+            values
         )
         if not value:
-            values = tuple(values.values())
-            query = 'INSERT INTO {} VALUES {}'.format(
-                table_name, values
-            )
+            query = 'INSERT INTO carbery_table VALUES (?, ?, ?, ?)'
             try:
-                self.cursor.execute(query)
+                self.cursor.execute(query, values)
                 self.conn.commit()
             except Exception as err:
                 print(err)
                 self.conn.rollback()
 
-    def get_value(self, select, table_name, where=None):
-        query = 'SELECT {} FROM {}'.format(
-            str(select), table_name
-        )
-        if where:
-            query = '{} WHERE {}'.format(query, where)
-        self.cursor.execute(query)
+    def get_value(self, query, values):
+        self.cursor.execute(query, values)
         response = self.cursor.fetchone()
         if response:
             response_keys = response.keys()
@@ -49,11 +36,10 @@ class Database():
         else:
             return tuple()
 
-    def del_value(self, table_name, where):
-        query = 'DELETE FROM {} WHERE {}'.format(
-            table_name, where
-        )
-        self.cursor.execute(query)
+    def del_value(self, where_values):
+        query = '''DELETE FROM carbery_table 
+            WHERE userId=? and (sha256=? or md5=?)'''
+        self.cursor.execute(query, where_values)
         self.conn.commit()
 
         return tuple(self.cursor.fetchall())
